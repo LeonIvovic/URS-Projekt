@@ -5,6 +5,9 @@
 #include <stdio.h>
 #include <util/delay.h>
 #include <string.h>
+#define PIR_Input PINC
+
+#define SERVO_PIN PA4
 
 char keypad[4][4] = {
 	{'1', '2', '3', 'A'},
@@ -22,9 +25,24 @@ int flagMaster = 0;
 char pos[20];
 char MASTER[5] = {'0', '0', '0', '0', '\0'};
 
+void setServoPosition(int position) {
+	// Calculate delay time based on position
+	int delay = (position * 10) + 600;
+	// Set servo pin as output
+	DDRA |= (1 << SERVO_PIN);
+	// Send servo pulse
+	PORTA |= (1 << SERVO_PIN);
+	_delay_loop_2(delay);
+	PORTA &= ~(1 << SERVO_PIN);
+	_delay_ms(1000);
+}
+
 int main(void) {
 	DDRB = 0xF0; // Set PINA[7:4] as output and PINA[3:0] as input
 	PORTB = 0xFF; // Enable pull-up resistors on PINA[3:0]
+	
+	DDRC = 0x00;   /* Set the PIR port as input port */
+	
 	DDRD = _BV(4);
 
 	TCCR1A = _BV(COM1B1) | _BV(WGM10);
@@ -103,11 +121,11 @@ int main(void) {
 						}
 					}
 					
- 					if (keypad[j][i] == 'A') {
-						 lcd_clrscr();
-						 lcd_gotoxy(0, 0);
-						 lcd_puts("Upisi lozinku:");
-						 flagWritePass = 1;
+					if (keypad[j][i] == 'A') {
+						lcd_clrscr();
+						lcd_gotoxy(0, 0);
+						lcd_puts("Upisi lozinku:");
+						flagWritePass = 1;
 					}
 					if (keypad[j][i] != 'A' && flagWritePass) {
 						if (position < 4) {
@@ -118,7 +136,12 @@ int main(void) {
 								lcd_clrscr();
 								lcd_gotoxy(0, 0);
 								if (strcmp(MASTER, password) == 0 || strcmp(password, newPassword) == 0) {
-									lcd_puts("Dobra lozinka");
+									lcd_puts("Ispravna lozinka");
+									_delay_ms(2000);
+									setServoPosition(180);
+									// Set servo to 135 degrees
+									_delay_ms(5000);
+									setServoPosition(30);
 								}
 								else {
 									lcd_puts("Ne valja");
@@ -137,6 +160,15 @@ int main(void) {
 				}
 			}
 		}
+		
+		if (PIR_Input & (1<<0)) {
+			_delay_ms(2000);
+			setServoPosition(180);
+			// Set servo to 135 degrees
+			_delay_ms(5000);
+			setServoPosition(30);
+		}
+		
 	}
 	return 0;
 }
