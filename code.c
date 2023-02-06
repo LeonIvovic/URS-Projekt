@@ -20,8 +20,6 @@ char password[5];
 int position = 0;
 char MASTER[5] = {'0', '0', '0', '0', '\0'};
 
-int password
-
 /*
 	States:
 	0 - Show menu (default state
@@ -40,7 +38,6 @@ int state = 0;
 	2.1 Ako je checkPassword 1, provjerava se ispravnost i vraca 1/0 ovisno o tocnosti
 	2.2 Ako je checkPassword 0, vraca 1 (zavrsen unos)
 */
-
 int passwordInput(int checkPassword){
 	if (position < 4)
 	{
@@ -116,13 +113,11 @@ void passwordSuccess(){
 }
 
 void passwordFail(){
-    lcd_puts("Ne valja");
+	lcd_puts("Ne valja");
 	_delay_ms(5000);
 
 	state = 0;
 }
-
-
 
 void setServoPosition(int position) {
 	// Calculate delay time based on position
