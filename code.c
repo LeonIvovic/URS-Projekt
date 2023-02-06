@@ -32,16 +32,16 @@ int tryCounter = 3;
 void call_buzzer(int time){
 	if(!(PORTA & _BV(BUZZER_PIN))) return;
 	
-		PORTA &= ~_BV(BUZZER_PIN);
-		
+	PORTA &= ~_BV(BUZZER_PIN);
 	
-		while (time > 0){
-			_delay_ms(1);
-			time--;
-		}
-		
-		PORTA |= _BV(BUZZER_PIN);
-		
+	
+	while (time > 0){
+		_delay_ms(1);
+		time--;
+	}
+	
+	PORTA |= _BV(BUZZER_PIN);
+	
 
 	
 	
@@ -71,7 +71,7 @@ int main(void) {
 
 	TCCR1A = _BV(COM1B1) | _BV(WGM10);
 	TCCR1B = _BV(WGM12) | _BV(CS11);
-	OCR1B = 10;
+	OCR1B = 40;
 
 	lcd_init(LCD_DISP_ON); // Initialize LCD
 
@@ -171,9 +171,15 @@ int main(void) {
 								lcd_clrscr();
 								lcd_gotoxy(0, 0);
 								if (strcmp(MASTER, password) == 0 || strcmp(password, newPassword) == 0) {
-									tryCounter = 2;
+									tryCounter = 3;
 									PORTA |= _BV(BUZZER_PIN);
 									lcd_puts("Ispravna lozinka");
+									_delay_ms(100);
+									call_buzzer(100);
+									_delay_ms(100);
+									call_buzzer(100);
+									_delay_ms(100);
+									call_buzzer(100);
 									_delay_ms(2000);
 									setServoPosition(180);
 									// Set servo to 135 degrees
