@@ -8,6 +8,7 @@
 #define PIR_Input PINC
 
 #define SERVO_PIN PA4
+#define BUZZER_PIN PA3
 
 char keypad[4][4] = {
 	{'1', '2', '3', 'A'},
@@ -24,6 +25,28 @@ int flagWritePass = 0;
 int flagMaster = 0;
 char pos[20];
 char MASTER[5] = {'0', '0', '0', '0', '\0'};
+
+
+int tryCounter = 3;
+
+void call_buzzer(int time){
+	if(!(PORTA & _BV(BUZZER_PIN))) return;
+	
+		PORTA &= ~_BV(BUZZER_PIN);
+		
+	
+		while (time > 0){
+			_delay_ms(1);
+			time--;
+		}
+		
+		PORTA |= _BV(BUZZER_PIN);
+		
+
+	
+	
+}
+
 
 void setServoPosition(int position) {
 	// Calculate delay time based on position
@@ -42,7 +65,8 @@ int main(void) {
 	PORTB = 0xFF; // Enable pull-up resistors on PINA[3:0]
 	
 	DDRC = 0x00;   /* Set the PIR port as input port */
-	
+	DDRA |= (1 << BUZZER_PIN);
+	PORTA |= (1 << BUZZER_PIN);
 	DDRD = _BV(4);
 
 	TCCR1A = _BV(COM1B1) | _BV(WGM10);
@@ -61,7 +85,7 @@ int main(void) {
 			PORTB = ~(1 << (i + 4)); // Set the current column to 0 and others to 1
 			for (int j = 0; j < 4; j++) { // Loop through the rows
 				if (!(PINB & (1 << j))) { // Check if the current button is pressed
-					
+					call_buzzer(50);
 					if (keypad[j][i] == 'D' && flagMaster == 0) {
 						lcd_clrscr();
 						lcd_gotoxy(0, 0);
@@ -78,7 +102,9 @@ int main(void) {
 								lcd_clrscr();
 								lcd_gotoxy(0, 0);
 								if (strcmp(MASTER, password) == 0) {
+									tryCounter = 3;
 									lcd_puts("Dobar master\nUpis nove sifre");
+									PORTA |= _BV(BUZZER_PIN);
 									flagChangePass = 1;
 									flagMaster = 0;
 									_delay_ms(2000);
@@ -88,6 +114,14 @@ int main(void) {
 									break;
 								}
 								else {
+									tryCounter--;
+									
+									if(tryCounter == 0){
+										PORTA &= ~_BV(BUZZER_PIN);
+										//_delay_ms(2000);
+										
+									}
+									
 									lcd_puts("Ne valja master\nPokusajte opet");
 									_delay_ms(2000);
 									lcd_clrscr();
@@ -106,6 +140,7 @@ int main(void) {
 						lcd_putc(keypad[j][i]);
 						newPassword[position++] = keypad[j][i];
 						if (position == 4) {
+							
 							position = 0;
 							flagChangePass = 0;
 							lcd_clrscr();
@@ -136,6 +171,8 @@ int main(void) {
 								lcd_clrscr();
 								lcd_gotoxy(0, 0);
 								if (strcmp(MASTER, password) == 0 || strcmp(password, newPassword) == 0) {
+									tryCounter = 2;
+									PORTA |= _BV(BUZZER_PIN);
 									lcd_puts("Ispravna lozinka");
 									_delay_ms(2000);
 									setServoPosition(180);
@@ -145,6 +182,16 @@ int main(void) {
 								}
 								else {
 									lcd_puts("Ne valja");
+									
+									tryCounter--;
+									
+									if(tryCounter == 0){
+										PORTA &= ~_BV(BUZZER_PIN);
+										_delay_ms(2000);
+										//PORTA |= _BV(BUZZER_PIN);
+										lcd_clrscr();
+										lcd_puts("3 kriva unosa\nupisi lozinku");
+									}
 								}
 								position = 0;
 								flagWritePass = 0;
