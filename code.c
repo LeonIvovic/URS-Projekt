@@ -43,8 +43,8 @@ int passwordInput(int checkPassword){
 	{
 		passwordCorrect = -1;
 		lcd_ xy(position, 1);
-    	lcd_putc('*');
-    	password[position++] = keypad[j][i];
+    		lcd_putc('*');
+    		password[position++] = keypad[j][i];
 		return 2;
 	}
 	else if (checkPassword == 1)
@@ -76,17 +76,17 @@ void showMenu(){
 }
 
 void newPasswordSuccess(){
-    lcd_puts("Dobar master\nUpis nove sifre");
-    _delay_ms(2000);
-    lcd_clrscr();
-    lcd_puts("Nova lozika:");
-
+    	lcd_puts("Dobar master\nUpis nove sifre");
+    	_delay_ms(2000);
+    	lcd_clrscr();
+	lcd_puts("Nova lozika:");
+	
 	state = 2;
 }
 
 void newPasswordFail(){
-    lcd_puts("Ne valja master\nPokusajte opet");
-    _delay_ms(2000);
+    	lcd_puts("Ne valja master\nPokusajte opet");
+    	_delay_ms(2000);
 
 	state = 0;
 }
