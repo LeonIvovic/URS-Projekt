@@ -31,9 +31,9 @@ char MASTER[5] = {'0', '0', '0', '0', '\0'};
 */
 int state = 0;
 
-void passwordCheck(){
-	if (strcmp(MASTER, inputPassword) == 0 || (inputPassword != "" && strcmp(password, inputPassword) == 0)) {
-		return 1:
+int passwordCheck(){
+	if (strcmp(MASTER, inputPassword) == 0 || (strcmp(password, inputPassword) == 0)) {
+		return 1;
 	}
 	else {
 		return 0;
@@ -94,7 +94,7 @@ void newPasswordFail(){
 void newPasswordSet(){
 	lcd_puts("Nova lozinka :");
 	lcd_gotoxy(0, 1);
-    password = inputPassword;
+    strcpy(password, inputPassword);
 	lcd_puts(password);
 	_delay_ms(2000);
 
@@ -166,11 +166,13 @@ int main(void) {
 						state = 3;
 					}
 					
+					int passCorrect;
 					switch (state)
 					{
+						
 						//Password change - start
 						case 1:
-							int passCorrect = passwordInput(i, j, 1);
+							passCorrect = passwordInput(i, j, 1);
 							if (passCorrect == 1)
 							{
 								newPasswordSuccess();
@@ -183,7 +185,7 @@ int main(void) {
 
 						//Password change - end
 						case 2:
-							int passCorrect = passwordInput(i, j, 0);
+							passCorrect = passwordInput(i, j, 0);
 							if (passCorrect == 1)
 							{
 								newPasswordSet();
@@ -192,7 +194,7 @@ int main(void) {
 
 						//Enter password to open ramp
 						case 3:
-							int passCorrect = passwordInput(i, j, 1);
+							passCorrect = passwordInput(i, j, 1);
 							if (passCorrect == 1)
 							{
 								passwordSuccess();
