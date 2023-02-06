@@ -190,7 +190,7 @@ int main(void) {
 							break;
 
 						//Enter password to open ramp
-						case 2:
+						case 3:
 							int passCorrect = passwordInput(1);
 							if (passCorrect == 1)
 							{
