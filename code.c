@@ -17,6 +17,7 @@ char keypad[4][4] = {
 };
 
 char password[5];
+char inputPassword[5];
 int position = 0;
 char MASTER[5] = {'0', '0', '0', '0', '\0'};
 
@@ -30,6 +31,15 @@ char MASTER[5] = {'0', '0', '0', '0', '\0'};
 */
 int state = 0;
 
+void passwordCheck(){
+	if (strcmp(MASTER, inputPassword) == 0 || (inputPassword != "" && strcmp(password, inputPassword) == 0)) {
+		return 1:
+	}
+	else {
+		return 0;
+	}
+}
+
 /*
 	Unos sifre
 	
@@ -38,13 +48,12 @@ int state = 0;
 	2.1 Ako je checkPassword 1, provjerava se ispravnost i vraca 1/0 ovisno o tocnosti
 	2.2 Ako je checkPassword 0, vraca 1 (zavrsen unos)
 */
-int passwordInput(int checkPassword){
+int passwordInput(int i, int j, int checkPassword){
 	if (position < 4)
 	{
-		passwordCorrect = -1;
-		lcd_ xy(position, 1);
-    		lcd_putc('*');
-    		password[position++] = keypad[j][i];
+		lcd_gotoxy(position, 1);
+    	lcd_putc('*');
+    	inputPassword[position++] = keypad[j][i];
 		return 2;
 	}
 	else if (checkPassword == 1)
@@ -61,32 +70,23 @@ int passwordInput(int checkPassword){
 	}
 }
 
-void passwordCheck(){
-	if (strcmp(MASTER, password) == 0 || (newPassword != "" && strcmp(password, newPassword) == 0)) {
-		return 1:
-	}
-	else {
-		return 0;
-	}
-}
-
 void showMenu(){
     lcd_clrscr();
     lcd_puts("A - upis loznike\nD - nova lozinka");
 }
 
 void newPasswordSuccess(){
-    	lcd_puts("Dobar master\nUpis nove sifre");
-    	_delay_ms(2000);
-    	lcd_clrscr();
+    lcd_puts("Dobar master\nUpis nove sifre");
+    _delay_ms(2000);
+    lcd_clrscr();
 	lcd_puts("Nova lozika:");
 	
 	state = 2;
 }
 
 void newPasswordFail(){
-    	lcd_puts("Ne valja master\nPokusajte opet");
-    	_delay_ms(2000);
+    lcd_puts("Ne valja master\nPokusajte opet");
+    _delay_ms(2000);
 
 	state = 0;
 }
@@ -94,10 +94,23 @@ void newPasswordFail(){
 void newPasswordSet(){
 	lcd_puts("Nova lozinka :");
 	lcd_gotoxy(0, 1);
+    password = inputPassword;
 	lcd_puts(password);
 	_delay_ms(2000);
 
 	state = 0;
+}
+
+void setServoPosition(int position) {
+	// Calculate delay time based on position
+	int delay = (position * 10) + 600;
+	// Set servo pin as output
+	DDRA |= (1 << SERVO_PIN);
+	// Send servo pulse
+	PORTA |= (1 << SERVO_PIN);
+	_delay_loop_2(delay);
+	PORTA &= ~(1 << SERVO_PIN);
+	_delay_ms(1000);
 }
 
 void passwordSuccess(){
@@ -117,18 +130,6 @@ void passwordFail(){
 	_delay_ms(5000);
 
 	state = 0;
-}
-
-void setServoPosition(int position) {
-	// Calculate delay time based on position
-	int delay = (position * 10) + 600;
-	// Set servo pin as output
-	DDRA |= (1 << SERVO_PIN);
-	// Send servo pulse
-	PORTA |= (1 << SERVO_PIN);
-	_delay_loop_2(delay);
-	PORTA &= ~(1 << SERVO_PIN);
-	_delay_ms(1000);
 }
 
 int main(void) {
@@ -169,7 +170,7 @@ int main(void) {
 					{
 						//Password change - start
 						case 1:
-							int passCorrect = passwordInput(1);
+							int passCorrect = passwordInput(i, j, 1);
 							if (passCorrect == 1)
 							{
 								newPasswordSuccess();
@@ -182,7 +183,7 @@ int main(void) {
 
 						//Password change - end
 						case 2:
-							int passCorrect = passwordInput(0);
+							int passCorrect = passwordInput(i, j, 0);
 							if (passCorrect == 1)
 							{
 								newPasswordSet();
@@ -191,7 +192,7 @@ int main(void) {
 
 						//Enter password to open ramp
 						case 3:
-							int passCorrect = passwordInput(1);
+							int passCorrect = passwordInput(i, j, 1);
 							if (passCorrect == 1)
 							{
 								passwordSuccess();
