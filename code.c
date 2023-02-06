@@ -8,6 +8,7 @@
 #define PIR_Input PINC
 
 #define SERVO_PIN PA4
+#define BUZZER_PIN PA3
 
 char keypad[4][4] = {
 	{'1', '2', '3', 'A'},
@@ -16,90 +17,36 @@ char keypad[4][4] = {
 	{'*', '0', '#', 'D'}
 };
 
+char newPassword[5];
 char password[5];
-char inputPassword[5];
 int position = 0;
+int flagChangePass = 0; // 0 -> inicijalizacija i otvaranje vrata (A), 1 -> promjena sifre
+int flagWritePass = 0;
+int flagMaster = 0;
+char pos[20];
 char MASTER[5] = {'0', '0', '0', '0', '\0'};
 
-/*
-	States:
-	0 - Show menu (default state
-	1 - Password change - start
-	2 - Password change - end
-	3 - Enter password to open ramp
 
-*/
-int state = 0;
+int tryCounter = 3;
 
-int passwordCheck(){
-	if (strcmp(MASTER, inputPassword) == 0 || (strcmp(password, inputPassword) == 0)) {
-		return 1;
-	}
-	else {
-		return 0;
-	}
-}
-
-/*
-	Unos sifre
+void call_buzzer(int time){
+	if(!(PORTA & _BV(BUZZER_PIN))) return;
 	
-	1. Unos 4 znaka
-	Nakon unosa 4 znaka:
-	2.1 Ako je checkPassword 1, provjerava se ispravnost i vraca 1/0 ovisno o tocnosti
-	2.2 Ako je checkPassword 0, vraca 1 (zavrsen unos)
-*/
-int passwordInput(int i, int j, int checkPassword){
-	if (position < 4)
-	{
-		lcd_gotoxy(position, 1);
-    	lcd_putc('*');
-    	inputPassword[position++] = keypad[j][i];
-		return 2;
-	}
-	else if (checkPassword == 1)
-	{
-		position = 0;
-		lcd_clrscr();
-		return passwordCheck();
-	}
-	else
-	{
-		position = 0;
-		lcd_clrscr();
-		return 1;
-	}
-}
-
-void showMenu(){
-    lcd_clrscr();
-    lcd_puts("A - upis loznike\nD - nova lozinka");
-}
-
-void newPasswordSuccess(){
-    lcd_puts("Dobar master\nUpis nove sifre");
-    _delay_ms(2000);
-    lcd_clrscr();
-	lcd_puts("Nova lozika:");
+		PORTA &= ~_BV(BUZZER_PIN);
+		
 	
-	state = 2;
+		while (time > 0){
+			_delay_ms(1);
+			time--;
+		}
+		
+		PORTA |= _BV(BUZZER_PIN);
+		
+
+	
+	
 }
 
-void newPasswordFail(){
-    lcd_puts("Ne valja master\nPokusajte opet");
-    _delay_ms(2000);
-
-	state = 0;
-}
-
-void newPasswordSet(){
-	lcd_puts("Nova lozinka :");
-	lcd_gotoxy(0, 1);
-    strcpy(password, inputPassword);
-	lcd_puts(password);
-	_delay_ms(2000);
-
-	state = 0;
-}
 
 void setServoPosition(int position) {
 	// Calculate delay time based on position
@@ -113,31 +60,13 @@ void setServoPosition(int position) {
 	_delay_ms(1000);
 }
 
-void passwordSuccess(){
-	lcd_puts("Ispravna lozinka");
-	_delay_ms(2000);
-	setServoPosition(180);
-	// Set servo to 135 degrees
-	_delay_ms(5000);
-	setServoPosition(30);
-	_delay_ms(5000);
-
-	state = 0;
-}
-
-void passwordFail(){
-	lcd_puts("Ne valja");
-	_delay_ms(5000);
-
-	state = 0;
-}
-
 int main(void) {
 	DDRB = 0xF0; // Set PINA[7:4] as output and PINA[3:0] as input
 	PORTB = 0xFF; // Enable pull-up resistors on PINA[3:0]
 	
 	DDRC = 0x00;   /* Set the PIR port as input port */
-	
+	DDRA |= (1 << BUZZER_PIN);
+	PORTA |= (1 << BUZZER_PIN);
 	DDRD = _BV(4);
 
 	TCCR1A = _BV(COM1B1) | _BV(WGM10);
@@ -146,70 +75,134 @@ int main(void) {
 
 	lcd_init(LCD_DISP_ON); // Initialize LCD
 
-	showMenu();
+	lcd_clrscr();
+	lcd_gotoxy(0, 0);
+	lcd_puts("A - upis loznike\nD - nova lozinka");
+
 
 	while (1) {
 		for (int i = 0; i < 4; i++) { // Loop through the columns
 			PORTB = ~(1 << (i + 4)); // Set the current column to 0 and others to 1
 			for (int j = 0; j < 4; j++) { // Loop through the rows
 				if (!(PINB & (1 << j))) { // Check if the current button is pressed
-					
-					if (keypad[j][i] == 'D') {
+					call_buzzer(50);
+					if (keypad[j][i] == 'D' && flagMaster == 0) {
 						lcd_clrscr();
+						lcd_gotoxy(0, 0);
 						lcd_puts("Master lozinka:");
-						state = 1;
+						flagMaster = 1;
 					}
-
+					
+					if (keypad[j][i] != 'D' && flagMaster && flagChangePass == 0) {
+						if (position < 4) {
+							lcd_gotoxy(position, 1);
+							lcd_putc('*');
+							password[position++] = keypad[j][i];
+							if (position == 4) {
+								lcd_clrscr();
+								lcd_gotoxy(0, 0);
+								if (strcmp(MASTER, password) == 0) {
+									tryCounter = 3;
+									lcd_puts("Dobar master\nUpis nove sifre");
+									PORTA |= _BV(BUZZER_PIN);
+									flagChangePass = 1;
+									flagMaster = 0;
+									_delay_ms(2000);
+									lcd_clrscr();
+									lcd_puts("Nova lozika:");
+									position = 0;
+									break;
+								}
+								else {
+									tryCounter--;
+									
+									if(tryCounter == 0){
+										PORTA &= ~_BV(BUZZER_PIN);
+										//_delay_ms(2000);
+										
+									}
+									
+									lcd_puts("Ne valja master\nPokusajte opet");
+									_delay_ms(2000);
+									lcd_clrscr();
+									lcd_puts("A - upis loznike\nD - nova lozinka");
+									flagMaster = 0;
+									flagChangePass = 0;
+									position = 0;
+									break;
+								}
+							}
+						}
+					}
+					
+					if (keypad[j][i] != 'D' && flagChangePass && flagMaster == 0) {
+						lcd_gotoxy(position, 1);
+						lcd_putc(keypad[j][i]);
+						newPassword[position++] = keypad[j][i];
+						if (position == 4) {
+							
+							position = 0;
+							flagChangePass = 0;
+							lcd_clrscr();
+							lcd_gotoxy(0, 0);
+							lcd_puts("Nova lozinka :");
+							lcd_gotoxy(0, 1);
+							lcd_puts(newPassword);
+							
+							_delay_ms(2000);
+							lcd_clrscr();
+							lcd_gotoxy(0, 0);
+							lcd_puts("A - upis loznike\nD - nova lozinka");
+						}
+					}
+					
 					if (keypad[j][i] == 'A') {
 						lcd_clrscr();
+						lcd_gotoxy(0, 0);
 						lcd_puts("Upisi lozinku:");
-						state = 3;
+						flagWritePass = 1;
+					}
+					if (keypad[j][i] != 'A' && flagWritePass) {
+						if (position < 4) {
+							lcd_gotoxy(position, 1);
+							lcd_putc('*');
+							password[position++] = keypad[j][i];
+							if (position == 4) {
+								lcd_clrscr();
+								lcd_gotoxy(0, 0);
+								if (strcmp(MASTER, password) == 0 || strcmp(password, newPassword) == 0) {
+									tryCounter = 2;
+									PORTA |= _BV(BUZZER_PIN);
+									lcd_puts("Ispravna lozinka");
+									_delay_ms(2000);
+									setServoPosition(180);
+									// Set servo to 135 degrees
+									_delay_ms(5000);
+									setServoPosition(30);
+								}
+								else {
+									lcd_puts("Ne valja");
+									
+									tryCounter--;
+									
+									if(tryCounter == 0){
+										PORTA &= ~_BV(BUZZER_PIN);
+										_delay_ms(2000);
+										//PORTA |= _BV(BUZZER_PIN);
+										lcd_clrscr();
+										lcd_puts("3 kriva unosa\nupisi lozinku");
+									}
+								}
+								position = 0;
+								flagWritePass = 0;
+								_delay_ms(5000);
+								lcd_clrscr();
+								lcd_gotoxy(0, 0);
+								lcd_puts("A - upis loznike\nD - nova lozinka");
+							}
+						}
 					}
 					
-					int passCorrect;
-					switch (state)
-					{
-						
-						//Password change - start
-						case 1:
-							passCorrect = passwordInput(i, j, 1);
-							if (passCorrect == 1)
-							{
-								newPasswordSuccess();
-							} 
-							else if (passCorrect == 0)
-							{
-								newPasswordFail();
-							}
-							break;
-
-						//Password change - end
-						case 2:
-							passCorrect = passwordInput(i, j, 0);
-							if (passCorrect == 1)
-							{
-								newPasswordSet();
-							}
-							break;
-
-						//Enter password to open ramp
-						case 3:
-							passCorrect = passwordInput(i, j, 1);
-							if (passCorrect == 1)
-							{
-								passwordSuccess();
-							} 
-							else if (passCorrect == 0)
-							{
-								passwordFail();
-							}
-							break;
-
-						default:
-							showMenu();
-							break;
-					}
-				
 					_delay_ms(500);
 				}
 			}
