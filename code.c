@@ -1,39 +1,41 @@
-#define F_CPU 7372800UL
+#define F_CPU 7372800UL  // CPU clock for delay
 #include <avr/io.h>
 #include "lcd.h"
-#include <string.h>
+#include <string.h>		// included all necessary libraries for normal function of system
 #include <stdio.h>
 #include <util/delay.h>
 #include <string.h>
-#define PIR_Input PINC
 
-#define SERVO_PIN PA4
+#define MOTION_SENZOR PINC	// defined port for motion sensor
+#define SERVO_PIN PA4		// defined port for servo and buzzer
 #define BUZZER_PIN PA3
 
 char keypad[4][4] = {
 	{'1', '2', '3', 'A'},
-	{'4', '5', '6', 'B'},
+	{'4', '5', '6', 'B'},	// 2d array equal to values on keypad
 	{'7', '8', '9', 'C'},
 	{'*', '0', '#', 'D'}
 };
 
-char newPassword[5];
-char password[5];
+char newPassword[5];	//array of characters for storing new password
+char password[5];		// array of characters used for checking if the password matches to the one saved in the system or master password
 int position = 0;
-int flagChangePass = 0; // 0 -> inicijalizacija i otvaranje vrata (A), 1 -> promjena sifre
+int flagChangePass = 0;
 int flagWritePass = 0;
 int flagMaster = 0;
-char pos[20];
-char MASTER[5] = {'0', '0', '0', '0', '\0'};
+char MASTER[5] = {'0', '0', '0', '0', '\0'}; // predefined value of master password
 
 
-int tryCounter = 3;
+int tryCounter = 3;		//counter of invalid password inputs
+
+/*
+Function to create buzzing sound
+*/
 
 void call_buzzer(int time){
 	if(!(PORTA & _BV(BUZZER_PIN))) return;
 	
 	PORTA &= ~_BV(BUZZER_PIN);
-	
 	
 	while (time > 0){
 		_delay_ms(1);
@@ -41,19 +43,15 @@ void call_buzzer(int time){
 	}
 	
 	PORTA |= _BV(BUZZER_PIN);
-	
-
-	
-	
 }
 
+/*
+Function that generates specific delay based on value received as an argument with which a delay is created to move the ramp to a certain position.
+*/
 
 void setServoPosition(int position) {
-	// Calculate delay time based on position
-	int delay = (position * 10) + 600;
-	// Set servo pin as output
+	int delay = (position * 20) + 900;
 	DDRA |= (1 << SERVO_PIN);
-	// Send servo pulse
 	PORTA |= (1 << SERVO_PIN);
 	_delay_loop_2(delay);
 	PORTA &= ~(1 << SERVO_PIN);
@@ -61,19 +59,20 @@ void setServoPosition(int position) {
 }
 
 int main(void) {
-	DDRB = 0xF0; // Set PINA[7:4] as output and PINA[3:0] as input
-	PORTB = 0xFF; // Enable pull-up resistors on PINA[3:0]
-	
-	DDRC = 0x00;   /* Set the PIR port as input port */
+
+	DDRB = 0xF0;
+	PORTB = 0xFF;
+	DDRC = 0x00;
 	DDRA |= (1 << BUZZER_PIN);
-	PORTA |= (1 << BUZZER_PIN);
 	DDRD = _BV(4);
+	
+	PORTA |= (1 << BUZZER_PIN);
 
 	TCCR1A = _BV(COM1B1) | _BV(WGM10);
 	TCCR1B = _BV(WGM12) | _BV(CS11);
 	OCR1B = 40;
 
-	lcd_init(LCD_DISP_ON); // Initialize LCD
+	lcd_init(LCD_DISP_ON);
 
 	lcd_clrscr();
 	lcd_gotoxy(0, 0);
@@ -81,24 +80,26 @@ int main(void) {
 
 
 	while (1) {
-		for (int i = 0; i < 4; i++) { // Loop through the columns
+		for (int i = 0; i < 4; i++) {   // go trough rows and collumns with 2 while loops
 			PORTB = ~(1 << (i + 4)); // Set the current column to 0 and others to 1
 			for (int j = 0; j < 4; j++) { // Loop through the rows
 				if (!(PINB & (1 << j))) { // Check if the current button is pressed
-					call_buzzer(50);
-					if (keypad[j][i] == 'D' && flagMaster == 0) {
+					call_buzzer(50); //call buzzer for every pressed key
+					if (keypad[j][i] == 'D' && flagMaster == 0) { //enter master pass
+						lcd_clrscr();
 						lcd_clrscr();
 						lcd_gotoxy(0, 0);
 						lcd_puts("Master lozinka:");
 						flagMaster = 1;
 					}
 					
-					if (keypad[j][i] != 'D' && flagMaster && flagChangePass == 0) {
+					if (keypad[j][i] != 'D' && flagMaster && flagChangePass == 0) { //when master is good, you can change current password
 						if (position < 4) {
 							lcd_gotoxy(position, 1);
 							lcd_putc('*');
 							password[position++] = keypad[j][i];
 							if (position == 4) {
+								lcd_clrscr();
 								lcd_clrscr();
 								lcd_gotoxy(0, 0);
 								if (strcmp(MASTER, password) == 0) {
@@ -109,12 +110,13 @@ int main(void) {
 									flagMaster = 0;
 									_delay_ms(2000);
 									lcd_clrscr();
+									lcd_clrscr();
 									lcd_puts("Nova lozika:");
 									position = 0;
 									break;
 								}
-								else {
-									tryCounter--;
+								else { //if password is not correct on "change passwod"
+									tryCounter--; // we use try counter to keep track of trys that were used to change the password
 									
 									if(tryCounter == 0){
 										PORTA &= ~_BV(BUZZER_PIN);
@@ -124,6 +126,7 @@ int main(void) {
 									
 									lcd_puts("Ne valja master\nPokusajte opet");
 									_delay_ms(2000);
+									lcd_clrscr();
 									lcd_clrscr();
 									lcd_puts("A - upis loznike\nD - nova lozinka");
 									flagMaster = 0;
@@ -144,6 +147,7 @@ int main(void) {
 							position = 0;
 							flagChangePass = 0;
 							lcd_clrscr();
+							lcd_clrscr();
 							lcd_gotoxy(0, 0);
 							lcd_puts("Nova lozinka :");
 							lcd_gotoxy(0, 1);
@@ -151,12 +155,14 @@ int main(void) {
 							
 							_delay_ms(2000);
 							lcd_clrscr();
+							lcd_clrscr();
 							lcd_gotoxy(0, 0);
 							lcd_puts("A - upis loznike\nD - nova lozinka");
 						}
 					}
 					
 					if (keypad[j][i] == 'A') {
+						lcd_clrscr();
 						lcd_clrscr();
 						lcd_gotoxy(0, 0);
 						lcd_puts("Upisi lozinku:");
@@ -168,6 +174,7 @@ int main(void) {
 							lcd_putc('*');
 							password[position++] = keypad[j][i];
 							if (position == 4) {
+								lcd_clrscr();
 								lcd_clrscr();
 								lcd_gotoxy(0, 0);
 								if (strcmp(MASTER, password) == 0 || strcmp(password, newPassword) == 0) {
@@ -181,13 +188,13 @@ int main(void) {
 									_delay_ms(100);
 									call_buzzer(100);
 									_delay_ms(2000);
-									setServoPosition(180);
+									setServoPosition(90);
 									// Set servo to 135 degrees
 									_delay_ms(5000);
-									setServoPosition(30);
+									setServoPosition(0);
 								}
 								else {
-									lcd_puts("Ne valja");
+									lcd_puts("Kriva lozinka\nProbajte opet");
 									
 									tryCounter--;
 									
@@ -196,12 +203,14 @@ int main(void) {
 										_delay_ms(2000);
 										//PORTA |= _BV(BUZZER_PIN);
 										lcd_clrscr();
+										lcd_clrscr();
 										lcd_puts("3 kriva unosa\nupisi lozinku");
 									}
 								}
 								position = 0;
 								flagWritePass = 0;
 								_delay_ms(5000);
+								lcd_clrscr();
 								lcd_clrscr();
 								lcd_gotoxy(0, 0);
 								lcd_puts("A - upis loznike\nD - nova lozinka");
@@ -214,12 +223,11 @@ int main(void) {
 			}
 		}
 		
-		if (PIR_Input & (1<<0)) {
-			_delay_ms(2000);
-			setServoPosition(180);
-			// Set servo to 135 degrees
-			_delay_ms(5000);
-			setServoPosition(30);
+		if (MOTION_SENZOR & (1<<0)) {
+			_delay_ms(2000); //wait for user to pass a ramp
+			setServoPosition(90);//pull ramp up
+			_delay_ms(5000);//wait while ramp is up
+			setServoPosition(0); //return ramp to init state
 		}
 		
 	}
