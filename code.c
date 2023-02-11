@@ -4,7 +4,6 @@
 #include <string.h>		// included all necessary libraries for normal function of system
 #include <stdio.h>
 #include <util/delay.h>
-#include <string.h>
 
 #define MOTION_SENZOR PINC	// defined port for motion sensor
 #define SERVO_PIN PA4		// defined port for servo and buzzer
@@ -19,10 +18,10 @@ char keypad[4][4] = {
 
 char newPassword[5];	//array of characters for storing new password
 char password[5];		// array of characters used for checking if the password matches to the one saved in the system or master password
-int position = 0;
-int flagChangePass = 0;
-int flagWritePass = 0;
-int flagMaster = 0;
+int position = 0;		//storing values of keys form keypad on designated position in an array of characters
+int flagChangePass = 0;		//used for creating new password after validating master password 
+int flagWritePass = 0;		//used for validating entered password in order to open ramp after pushing 'A' key on keypad
+int flagMaster = 0;		//used for validating master password before creating a new one, it is set on 1 after pushing key 'D' on keypad
 char MASTER[5] = {'0', '0', '0', '0', '\0'}; // predefined value of master password
 
 
@@ -120,7 +119,6 @@ int main(void) {
 									
 									if(tryCounter == 0){
 										PORTA &= ~_BV(BUZZER_PIN);
-										//_delay_ms(2000);
 										
 									}
 									
@@ -189,7 +187,6 @@ int main(void) {
 									call_buzzer(100);
 									_delay_ms(2000);
 									setServoPosition(90);
-									// Set servo to 135 degrees
 									_delay_ms(5000);
 									setServoPosition(0);
 								}
@@ -201,7 +198,6 @@ int main(void) {
 									if(tryCounter == 0){
 										PORTA &= ~_BV(BUZZER_PIN);
 										_delay_ms(2000);
-										//PORTA |= _BV(BUZZER_PIN);
 										lcd_clrscr();
 										lcd_clrscr();
 										lcd_puts("3 kriva unosa\nupisi lozinku");
@@ -224,10 +220,10 @@ int main(void) {
 		}
 		
 		if (MOTION_SENZOR & (1<<0)) {
-			_delay_ms(2000); //wait for user to pass a ramp
+			_delay_ms(2000); //wait 2 seconds before pulling the ramp up
 			setServoPosition(90);//pull ramp up
-			_delay_ms(5000);//wait while ramp is up
-			setServoPosition(0); //return ramp to init state
+			_delay_ms(5000);//wait while ramp is up and car passes through
+			setServoPosition(0); //return ramp to initial state
 		}
 		
 	}
