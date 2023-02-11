@@ -22,7 +22,7 @@ Senzor pokreta na drugoj strani rampe detektira pokret (prilaz automobila), te t
 ### 5. Buzzer
 Buzzer se koristi kao potvrdna zvučna povratna informacija pri ptitisku tipke na keypadu, te za potvrdni signal pri unosu ispravne lozinke i alarm pri unosu neispravne.
 
-### 5. Servo motor
+### 6. Servo motor
 Servo motor se koristi za podizanje i spuštanje rampe
 
 ## Lozinke
